@@ -3,14 +3,6 @@
 #include<stdlib.h>
 #include"apc.h"
 
-int list_compare(Dlist *head1,Dlist *head2);
-void Insert_last(Dlist **head,Dlist **tail,int data);
-void Insert_first(Dlist **head,Dlist **tail,int data);
-void delete_list(Dlist **head, Dlist **tail);
-void addition(Dlist *hea1,Dlist *tail1,Dlist *head2,Dlist *tail2,Dlist **headR,Dlist **tailR);
-void substraction(Dlist *head1,Dlist *tail1,Dlist *head2,Dlist *tail2,Dlist **headR,Dlist **tailR);
-void multiplication(Dlist *head1,Dlist *tail1,Dlist *head2,Dlist *tail2,Dlist **headR,Dlist **tailR);
-
 int main(int argc,char *argv[])
 {
     if(argc!=4)
@@ -26,72 +18,158 @@ int main(int argc,char *argv[])
     
     Dlist *headR=NULL;
     Dlist *tailR=NULL;
-    int i=0;
-    char *str1=argv[1];
-    while(str1[i]!='\0')
+
+    int sign1 = 1, sign2 = 1;
+
+    if(argv[1][0] == '-')
+        sign1 = -1;
+
+    if(argv[3][0] == '-')
+        sign2 = -1;
+    
+    int i = (argv[1][0] == '-') ? 1 : 0;
+
+    char *str1 = argv[1];
+
+    while(str1[i] != '\0')
     {
-        int data=str1[i]-'0';
-        Insert_last(&head1,&tail1,data);
+        int data = str1[i] - '0';
+        Insert_last(&head1, &tail1, data);
         i++;
     }
 
-    i=0;
-    char *str2=argv[3];
-    while(str2[i]!='\0')
+    i = (argv[3][0] == '-') ? 1 : 0;
+
+    char *str2 = argv[3];
+
+    while(str2[i] != '\0')
     {
-        int data=str2[i]-'0';
-        Insert_last(&head2,&tail2,data);
+        int data = str2[i] - '0';
+        Insert_last(&head2, &tail2, data);
         i++;
-
     }
-    int negative=0;
-    if(strcmp(argv[2],"+")==0)
-    {
-        addition(head1,tail1,head2,tail2,&headR,&tailR);
-    }
-    else if(strcmp(argv[2],"-")==0)
-    {
 
-        if(list_compare(head1,head2)==1)
+        /* Remove leading zeros */
+    remove_leading_zeros(&head1, &tail1);
+    remove_leading_zeros(&head2, &tail2);
+
+    int negative = 0;
+    int temp_sign2 = sign2;
+    int zero=1;
+
+    /* Change second sign for subtraction */
+    if(strcmp(argv[2], "-") == 0)
+    {
+        temp_sign2 = -sign2;
+    }
+
+    /* Addition and subtraction */
+    if(strcmp(argv[2], "+") == 0 || strcmp(argv[2], "-") == 0)
+    {
+        if(sign1 == temp_sign2)
         {
-            substraction(head1,tail1,head2,tail2,&headR,&tailR);
+            addition(head1, tail1, head2, tail2, &headR, &tailR);
+
+            if(sign1 == -1)
+                negative = 1;
         }
         else
         {
-            substraction(head2,tail2,head1,tail1,&headR,&tailR);
-            negative=1;
+            if(list_compare(head1, head2) == 1)
+            {
+                substraction(head1, tail1, head2, tail2, &headR, &tailR);
+
+                if(sign1 == -1)
+                    negative = 1;
+            }
+            else
+            {
+                substraction(head2, tail2, head1, tail1, &headR, &tailR);
+
+                if(temp_sign2 == -1)
+                    negative = 1;
+            }
         }
     }
+
     else if(strcmp(argv[2],"x")==0)
     {
         multiplication(head1,tail1,head2,tail2,&headR,&tailR);
+
+        if(sign1 != sign2)
+            negative = 1;
     }
     else if(strcmp(argv[2],"/")==0)
     {
-        //division(head1,tail1,head2,tail2,&headR,&tailR);
+        Dlist *temp = head2;
+        zero = 1;
+
+        while(temp != NULL)
+        {
+            if(temp->data != 0)
+            {
+                zero = 0;
+                break;
+            }
+            temp = temp->next;
+        }
+
+        if(zero == 1)
+        {
+            printf("Division by zero is not possible\n");
+            return 1;
+        }
+        division(head1,tail1,head2,tail2,&headR,&tailR);
+
+        if(sign1 != sign2)
+            negative = 1;
     }
     else{
         printf("Invalid operator\n");
         return 1;
     }
 
-    Dlist *temp=headR;
+    Dlist *temp = headR;
+
+    while(temp != NULL)
+    {
+        if(temp->data != 0)
+        {
+            zero = 0;
+            break;
+        }
+        temp = temp->next;
+    }
+
+    temp = headR;
     printf("result\n");
-    if(negative==1)
+
+    if(negative == 1 && zero == 0)
     {
         printf("-");
     }
-    while(temp!=NULL)
+
+    while(temp != NULL)
     {
-        printf("%d ",temp->data);
-        temp=temp->next;
+        printf("%d ", temp->data);
+        temp = temp->next;
     }
     printf("\n");
-    
+
     return 0;
 
 }
 
+void remove_leading_zeros(Dlist **head, Dlist **tail)
+{
+    while(*head != NULL && (*head)->data == 0 && (*head)->next != NULL)
+    {
+        Dlist *temp = *head;
+        *head = (*head)->next;
+        (*head)->prev = NULL;
+        free(temp);
+    }
+}
 
 void Insert_last(Dlist **head,Dlist **tail,int data)
 {
@@ -148,6 +226,7 @@ void delete_list(Dlist **head, Dlist **tail)
         free(temp);
         temp=*head;
     }
+    *tail=NULL;
     
 }
 
@@ -268,13 +347,7 @@ void substraction(Dlist *head1,Dlist *tail1,Dlist *head2,Dlist *tail2,Dlist **he
         data=num1-num2;
         Insert_first(headR,tailR,data);
     }
-    while((*headR)->data==0 && (*headR)->next!=NULL)
-    {
-        Dlist *temp=*headR;
-        *headR=(*headR)->next;
-        (*headR)->prev=NULL;
-        free(temp);
-    }
+   remove_leading_zeros(headR,tailR);
 }
 
 void multiplication(Dlist *head1,Dlist *tail1,Dlist *head2,Dlist *tail2,Dlist **headR,Dlist **tailR)
@@ -284,9 +357,41 @@ void multiplication(Dlist *head1,Dlist *tail1,Dlist *head2,Dlist *tail2,Dlist **
     Dlist *tailR1=NULL;
     Dlist *tailR2=NULL;
 
+    Dlist *temp = head1;
+    int zero1 = 1, zero2 = 1;
+
+    while(temp != NULL)
+    {
+        if(temp->data != 0)
+        {
+            zero1 = 0;
+            break;
+        }
+        temp = temp->next;
+    }
+
+    temp = head2;
+
+    while(temp != NULL)
+    {
+        if(temp->data != 0)
+        {
+            zero2 = 0;
+            break;
+        }
+        temp = temp->next;
+    }
+
+    if(zero1 == 1 || zero2 == 1)
+    {
+        Insert_last(headR, tailR, 0);
+        return;
+    }
+
     Dlist *temp1;
     Dlist *temp2=tail2;
     int count=0,carry,num1,num2,data;
+
     while(temp2!=NULL)
     {
         temp1=tail1;
@@ -336,3 +441,55 @@ void multiplication(Dlist *head1,Dlist *tail1,Dlist *head2,Dlist *tail2,Dlist **
    *headR=headR1;
    *tailR=tailR1;
 }
+
+void division(Dlist *head1,Dlist *tail1,Dlist *head2,Dlist *tail2,Dlist **headR,Dlist **tailR)
+{
+    Dlist *temp1=head1;
+
+    Dlist *headR1=NULL;
+    Dlist *tailR1=NULL;
+
+    Dlist *headR2=NULL;
+    Dlist *tailR2=NULL;
+
+    int count;
+
+    while(temp1!=NULL)
+    {
+        Insert_last(&headR1,&tailR1,temp1->data);
+        temp1=temp1->next;
+
+        remove_leading_zeros(&headR1, &tailR1);
+        
+        count=0;
+
+        while(headR1!=NULL && list_compare(headR1,head2)==1)
+        {
+            headR2=NULL;
+            tailR2=NULL;
+
+            substraction(headR1,tailR1,head2,tail2,&headR2,&tailR2);
+
+            delete_list(&headR1,&tailR1);
+            tailR1=NULL;
+
+            headR1=headR2;
+            tailR1=tailR2;
+
+            headR2=NULL;
+            tailR2=NULL;
+
+            count++;
+        }
+
+        Insert_last(headR,tailR,count);
+    }
+
+    //remove zeros
+
+    remove_leading_zeros(headR, tailR);
+
+}
+
+
+
